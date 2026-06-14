@@ -3,6 +3,8 @@ A menu-driven PowerShell tool for building Microsoft Sentinel Analytics Rules of
 
 It is designed for rapid rule prototyping without needing to work directly inside a Sentinel workspace.
 
+![Simple Sentinel Rule Generator](https://raw.githubusercontent.com/Schvenn/SimpleSentinelRuleGenerator/main/SimpleSentinelRuleGenerator.png)
+
 ---
 
 ## Features
