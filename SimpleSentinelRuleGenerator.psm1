@@ -151,9 +151,7 @@ return ($lines -join "`r`n")}
 $guid = [guid]::NewGuid().Guid; $ruleId = ($ruleName -replace '[^\w\s-]', '' -replace '\s+', '_') + ".json"
 
 # ---------------- DESCRIPTION / QUERY ------------------------------------------------------------
-function decriptionandquery {cls; Render-UI -State $state; $description = Read-MultiLine "Enter Description (END to finish):"; $state.Description = $description
-cls; Render-UI -State $state; $query = Read-MultiLine "Enter KQL Query (END to finish):"; $state.KQL = $query
-$description = $description ; $query = $query -replace '\\','\\\\'  -replace '"','\"' -replace "`r`n","\r\n"}
+function decriptionandquery {cls; Render-UI -State $state; $description = Read-MultiLine "Enter Description (END to finish):"; $state.Description = $description -replace "`r`n","\r\n"; cls; Render-UI -State $state; $query = Read-MultiLine "Enter KQL Query (END to finish):"; $state.KQL = $query -replace '\\','\\\\'  -replace '"','\"' -replace "`r`n","\r\n";}
 decriptionandquery
 
 # ---------------- RULE TYPE ----------------------------------------------------------------------
