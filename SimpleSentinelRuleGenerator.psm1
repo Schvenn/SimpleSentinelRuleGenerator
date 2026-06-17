@@ -35,7 +35,7 @@ else {$wrappedLines = @()}
 $position = 0}
 
 # Display Table of Contents.
-while ($true) {cls; Write-Host -f cyan "$(Get-ChildItem (Split-Path $PSCommandPath) | Where-Object { $_.FullName -ieq $PSCommandPath } | Select-Object -ExpandProperty BaseName) Help Sections:`n"
+while ($true) {cls; Write-Host -f cyan "$(Get-ChildItem (Split-Path $PSCommandPath) | Where-Object {$_.FullName -ieq $PSCommandPath} | Select-Object -ExpandProperty BaseName) Help Sections:`n"
 
 if ($sections.Count -gt 7) {$half = [Math]::Ceiling($sections.Count / 2)
 for ($i = 0; $i -lt $half; $i++) {$leftIndex = $i; $rightIndex = $i + $half; $leftNumber  = "{0,2}." -f ($leftIndex + 1); $leftLabel   = " $($sections[$leftIndex].Groups[1].Value)"; $leftOutput  = [string]::Empty
@@ -63,8 +63,8 @@ for ($j = 0; $j -lt ($pageSize - ($end - $position)); $j++) {Write-Host ""}
 line yellow 100; Write-Host -f white "[↑/↓]  [PgUp/PgDn]  [Home/End]  |  [#] Select section  |  [Q] Quit  " -n; if ($inputBuffer.length -gt 0) {Write-Host -f cyan "section: $inputBuffer" -n}; $key = [System.Console]::ReadKey($true)
 
 # Define interaction.
-switch ($key.Key) {'UpArrow' {if ($position -gt 0) { $position-- }; $inputBuffer = ""}
-'DownArrow' {if ($position -lt ($wrappedLines.Count - $pageSize)) { $position++ }; $inputBuffer = ""}
+switch ($key.Key) {'UpArrow' {if ($position -gt 0) {$position--}; $inputBuffer = ""}
+'DownArrow' {if ($position -lt ($wrappedLines.Count - $pageSize)) {$position++}; $inputBuffer = ""}
 'PageUp' {$position -= 30; if ($position -lt 0) {$position = 0}; $inputBuffer = ""}
 'PageDown' {$position += 30; $maxStart = [Math]::Max(0, $wrappedLines.Count - $pageSize); if ($position -gt $maxStart) {$position = $maxStart}; $inputBuffer = ""}
 'Home' {$position = 0; $inputBuffer = ""}
@@ -110,7 +110,7 @@ if ($obj.type -eq "attack-pattern") {$techLookup[$id] = $obj.name}
 if ($obj.type -eq "attack-pattern" -and -not $obj.x_mitre_is_subtechnique) {$tactics = @()
 foreach ($phase in $obj.kill_chain_phases) {if ($phase.kill_chain_name -ne "mitre-attack") {continue}
 if ($phase.phase_name) {$tactics += $phase.phase_name}}
-$techToTactic[$id] = $tactics | ForEach-Object { Normalize-TacticName $_ } | Select-Object -Unique}
+$techToTactic[$id] = $tactics | ForEach-Object {Normalize-TacticName $_} | Select-Object -Unique}
 
 # ---------------- SUBTECH → TECH -----------------------------------------------------------------
 if ($obj.x_mitre_is_subtechnique -eq $true) {$subToTech[$id] = ($id -split '\.')[0]}}
@@ -131,11 +131,12 @@ EntityDraft="";
 UsedEntityPairs = @();
 QueryFrequency="PT1H";
 QueryPeriod="PT1H";
-LookbackDuration = "PT5H";
-SuppressionDuration="PT5H";
+LookbackDuration = "PT1H";
+SuppressionEnabled = $false;
+SuppressionDuration="PT1H";
+StartTimeUtc = $null;
 TriggerOperator = "GreaterThan"
 TriggerThreshold = 0;
-StartTimeUtc = $null;
 CreateIncident = $true;
 GroupingEnabled = $false;
 ReopenClosedIncident = $false;
@@ -143,44 +144,46 @@ MatchingMethod = "AllEntities";
 GroupByEntities = @();
 GroupByAlertDetails = @();
 GroupByCustomDetails = @();
-AggregationKind = "SingleAlert";
-AlertDetailsOverride = @{};}
+AggregationKind = "SingleAlert";}
+
+$state.AlertDetailsOverride = @{};
 
 # ---------------- CREATE SCREEN ------------------------------------------------------------------
-function Render-UI ([hashtable]$State, [string[]]$Menu = @(), [string]$Prompt = "") {cls; $State.FileName = ($ruleName -replace '[^\w\s-]', '' -replace '\s+', '_') + ".json"; $State.Name = $ruleName
+function Render-UI ([hashtable]$state, [string[]]$Menu = @(), [string]$Prompt = "") {cls; $state.FileName = ($ruleName -replace '[^\w\s-]', '' -replace '\s+', '_') + ".json"; $state.Name = $ruleName
 
 # ---------------- HEADER ----------------
 Write-Host -f Yellow ("-" * 100); Write-Host "Simple Sentinel Rule Generator:" -f Yellow; Write-Host -f Yellow ("-" * 100)
 
 # ---------------- FIELDS ----------------
 $customDetailLine = ""
-if ($State.CustomDetails.Count -gt 0) {$customDetailLine = ($State.CustomDetails.GetEnumerator() | ForEach-Object {"$($_.Key):$($_.Value)"}) -join "; "}
+if ($state.CustomDetails.Count -gt 0) {$customDetailLine = ($state.CustomDetails.GetEnumerator() | ForEach-Object {"$($_.Key):$($_.Value)"}) -join "; "}
 
 $alertOverrideLine = ""
 if ($state.AlertDetailsOverride.Count -gt 0) {$alertOverrideLine = ($state.AlertDetailsOverride.GetEnumerator() | ForEach-Object {"$($_.Key):$($_.Value)"}) -join "; "}
 
-$fields = @(@{Type="Value"; Name="FileName"; Value=$State.FileName}
+$fields = @(@{Type="Value"; Name="FileName"; Value=$state.FileName}
 @{Type="Header"; Name="---------------------------------------------------------------------------"}
-@{Type="Value"; Name="Name"; Value=$State.Name}
-@{Type="Value"; Name="Description"; Value=($State.Description -replace "`r`n"," ") -replace '^(.{50}).*','$1...'}
-@{Type="Value"; Name="KQL"; Value=($State.KQL -replace "`r`n"," ") -replace '^(.{50}).*','$1...'}
+@{Type="Value"; Name="Name"; Value=$state.Name}
+@{Type="Value"; Name="Description"; Value=($state.Description -replace "`r`n"," ") -replace '^(.{50}).*','$1...'}
+@{Type="Value"; Name="KQL"; Value=($state.KQL -replace "`r`n"," ") -replace '^(.{50}).*','$1...'}
 @{Type="Header"; Name="---------------------------------------------------------------------------"}
-@{Type="Value"; Name="Type"; Value=$State.Type}
-@{Type="Value"; Name="Enabled"; Value=$State.Enabled}
-@{Type="Value"; Name="Severity"; Value=$State.Severity}
+@{Type="Value"; Name="Type"; Value=$state.Type}
+@{Type="Value"; Name="Enabled"; Value=$state.Enabled}
+@{Type="Value"; Name="Severity"; Value=$state.Severity}
 @{Type="Header"; Name="------------------------------ MITRE ATT&CK -------------------------------"}
-@{Type="Value"; Name="Tactics"; Value=($State.Tactics -join ", ")}
-@{Type="Value"; Name="Techniques"; Value=($State.Techniques -join ", ")}
-@{Type="Value"; Name="Sub-Techniques"; Value=($State.SubTechniques -join ", ")}
+@{Type="Value"; Name="Tactics"; Value=($state.Tactics -join ", ")}
+@{Type="Value"; Name="Techniques"; Value=($state.Techniques -join ", ")}
+@{Type="Value"; Name="Sub-Techniques"; Value=($state.SubTechniques -join ", ")}
 @{Type="Header"; Name="------------------------------ TIME SETTINGS ------------------------------"}
 @{Type="Value"; Name="Query Frequency"; Value=$state.QueryFrequency}
 @{Type="Value"; Name="Query Period"; Value=$state.QueryPeriod}
 @{Type="Value"; Name="Lookback Duration"; Value=$state.LookbackDuration}
+@{Type="Value"; Name="Suppression Enabled"; Value=$state.SuppressionEnabled}
 @{Type="Value"; Name="Suppression Duration"; Value=$state.SuppressionDuration}
+@{Type="Value"; Name="Start Time UTC"; Value=$state.StartTimeUtc}
 @{Type="Header"; Name="------------------------------ INCIDENT SETTINGS --------------------------"}
 @{Type="Value"; Name="Trigger Operator"; Value=$state.TriggerOperator}
 @{Type="Value"; Name="Trigger Threshold"; Value=$state.TriggerThreshold}
-@{Type="Value"; Name="Start Time UTC"; Value=$state.StartTimeUtc}
 @{Type="Value"; Name="Create Incident"; Value=$state.CreateIncident}
 @{Type="Value"; Name="Grouping Enabled"; Value=$state.GroupingEnabled}
 @{Type="Value"; Name="Reopen Closed Incident"; Value=$state.ReopenClosedIncident}
@@ -196,7 +199,7 @@ $fields = @(@{Type="Value"; Name="FileName"; Value=$State.FileName}
 
 # ---------------- ENTITY LINE ----------------
 $entityLine = @()
-$entityLine = if ($State.EntityDraft) {$State.EntityDraft}
+$entityLine = if ($state.EntityDraft) {$state.EntityDraft}
 else {""}
 $fields += @{Name="Sentinel Entities"; Value=$entityLine}
 $labelWidth = 25
@@ -268,40 +271,40 @@ else {"High"}}
 severity
 
 # ---------------- MITRE INPUT --------------------------------------------------------------------
-function mitre {$State.Tactics = @(); $State.Techniques = @(); $State.SubTechniques = @()
+function mitre {$state.Tactics = @(); $state.Techniques = @(); $state.SubTechniques = @()
 cls; Render-UI -State $state; Write-Host -f Yellow "Enter MITRE ATT&CK TTPs (" -n; Write-Host -f Green "TA####, Tactic names, T####[.###]" -n; Write-Host -f Yellow "):"; $mitreInput = Read-Host
 $mitreList = $mitreInput -split "," | ForEach-Object {$_.Trim()} | Where-Object {$_}
 foreach ($m in $mitreList) {$m = $m.Trim()
-if ($m -match "^TA\d{4}$" -or $m -match "^[A-Za-z ]+$") {$State.Tactics += Normalize-Tactic $m; continue}
-if ($m -match "^T\d{4}\.\d{3}$") {$State.SubTechniques += Normalize-TechId $m; continue}
-if ($m -match "^T\d{4}$") {$State.Techniques += Normalize-TechId $m}}
+if ($m -match "^TA\d{4}$" -or $m -match "^[A-Za-z ]+$") {$state.Tactics += Normalize-Tactic $m; continue}
+if ($m -match "^T\d{4}\.\d{3}$") {$state.SubTechniques += Normalize-TechId $m; continue}
+if ($m -match "^T\d{4}$") {$state.Techniques += Normalize-TechId $m}}
 
-$State.Tactics = $State.Tactics | Select-Object -Unique
-$State.Techniques = $State.Techniques | Select-Object -Unique
-$State.SubTechniques = $State.SubTechniques | Select-Object -Unique}
+$state.Tactics = $state.Tactics | Select-Object -Unique
+$state.Techniques = $state.Techniques | Select-Object -Unique
+$state.SubTechniques = $state.SubTechniques | Select-Object -Unique}
 mitre
 
 # ---------------- DERIVE TECH + TACTICS ----------------------------------------------------------
 $derivedTech = @(); $derivedTac = @()
-foreach ($st in $State.SubTechniques) {$st = Normalize-TechId $st; $tech = Normalize-TechId ($st -replace '\.\d{3}$',''); $derivedTech += $tech
+foreach ($st in $state.SubTechniques) {$st = Normalize-TechId $st; $tech = Normalize-TechId ($st -replace '\.\d{3}$',''); $derivedTech += $tech
 if ($techToTactic[$tech]) {$derivedTac += $techToTactic[$tech]}}
-foreach ($t in $State.Techniques) {$t = Normalize-TechId $t
+foreach ($t in $state.Techniques) {$t = Normalize-TechId $t
 if ($techToTactic[$t]) {$derivedTac += $techToTactic[$t]}}
 
-$State.Techniques = @($State.Techniques + $derivedTech) | Select-Object -Unique
-$State.Tactics    = @($State.Tactics + $derivedTac) | Select-Object -Unique
+$state.Techniques = @($state.Techniques + $derivedTech) | Select-Object -Unique
+$state.Tactics    = @($state.Tactics + $derivedTac) | Select-Object -Unique
 cls; Render-UI -State $state
 
 # ---------------- CUSTOM DETAILS -----------------------------------------------------------------
-function customdetails {$State.CustomDetails = @{}; cls; Render-UI -State $state
+function customdetails {$state.CustomDetails = @{}; cls; Render-UI -State $state
 Write-Question "How many Custom Detail fields are required? "; $count = [int](Read-Host)
 for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail title: "; $name = Read-Host
 Write-Question "Field Name: "; $column = Read-Host
-if ($name -and $column) {$State.CustomDetails[$name] = $column; cls; Render-UI -State $state;}}}
+if ($name -and $column) {$state.CustomDetails[$name] = $column; cls; Render-UI -State $state;}}}
 customdetails
 
 # ---------------- ENTITY MAPPINGS ----------------------------------------------------------------
-function entitymappings {$State.Entities = @(); $State.EntityDraft = "";
+function entitymappings {$state.Entities = @(); $state.EntityDraft = "";
 $entityTypes = @("Account","Host","IP","URL","File","Process")
 $identifierMap = @{Account = @("Name","UPNSuffix","NTDomain","AadUserId","Sid")
 Host = @("HostName","DnsDomain","NTDomain","AzureID")
@@ -310,31 +313,31 @@ URL = @("Url")
 File = @("Name","Directory","MD5","SHA1","SHA256")
 Process = @("ProcessId","CommandLine","ImageFile")}
 
-function Get-AvailableIdentifiers($State, $etype, $idList) {$used = $State.UsedEntityPairs; return $idList | Where-Object {"$etype|$_" -notin $used}}
+function Get-AvailableIdentifiers($state, $etype, $idList) {$used = $state.UsedEntityPairs; return $idList | Where-Object {"$etype|$_" -notin $used}}
 
 cls; Render-UI -State $state
-function Add-EntitiesLive ([hashtable]$State, [hashtable]$IdentifierMap, [string[]]$EntityTypes) {$State.Entities = @(); $draft = ""; Write-Question "How many Sentinel Entity mappings? "; $entityCount = Read-Host
+function Add-EntitiesLive ([hashtable]$state, [hashtable]$IdentifierMap, [string[]]$EntityTypes) {$state.Entities = @(); $draft = ""; Write-Question "How many Sentinel Entity mappings? "; $entityCount = Read-Host
 
 # ---------------- ENTITY TYPE --------------------------------------------------------------------
 $entityIndex = 1
 while ($entityIndex -le [int]$entityCount) {Write-Host -f white "Select Entity Type:"
 for ($e = 0; $e -lt $EntityTypes.Count; $e++) {Write-Host "$($e+1) $($EntityTypes[$e])"}
 Write-Question "Entity Type: "; $etypeIndex = [int](Read-Host)
-$etype = $EntityTypes[$etypeIndex - 1]; $idList = @(Get-AvailableIdentifiers $State $etype $IdentifierMap[$etype])
+$etype = $EntityTypes[$etypeIndex - 1]; $idList = @(Get-AvailableIdentifiers $state $etype $IdentifierMap[$etype])
 
 if ($idList.Count -eq 0) {Write-Host -f Yellow "No more identifiers available for $etype"; continue}
 
 # Auto-handle single-identifier entities
-if ($etype -in @("IP","URL")) {$identifier = $idList[0]; $pair = "$etype|$identifier";  $State.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
+if ($etype -in @("IP","URL")) {$identifier = $idList[0]; $pair = "$etype|$identifier";  $state.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
 $entity = @{Type = $etype
 Identifier = $identifier
 Name = $column}
 
-$State.Entities += $entity
+$state.Entities += $entity
 if ($draft.Length -eq 0) {$draft = "$etype`:$identifier`:$column"}
 else {$draft += "; $etype`:$identifier`:$column"}
 
-$State.EntityDraft = $draft; Render-UI -State $State; $entityIndex++; continue}
+$state.EntityDraft = $draft; Render-UI -State $state; $entityIndex++; continue}
 
 Write-Question "How many field mappings for $($etype)`: "
 $fieldCount = [int](Read-Host)
@@ -347,28 +350,28 @@ Write-Question "Identifier: "; $idChoice = [int](Read-Host)
 $identifier = $selectionMap[$idChoice]
 if (-not $identifier) {$j--; continue}
 $pair = "$etype|$identifier"
-if ($State.UsedEntityPairs -contains $pair) {if ($State.UsedEntityPairs -contains $pair) {Write-Host -f red "That was already used."}; Read-Host; $j--; continue}
+if ($state.UsedEntityPairs -contains $pair) {if ($state.UsedEntityPairs -contains $pair) {Write-Host -f red "That was already used."}; Read-Host; $j--; continue}
 
-$State.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
+$state.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
 
 # ---------------- BUILD ENTITY OBJECT ------------------------------------------------------------
 $entity = @{Type = $etype; Identifier = $identifier; Name = $column}
-$State.Entities += $entity
+$state.Entities += $entity
 
 # ---------------- BUILD LIVE STRING --------------------------------------------------------------
 if ($draft.Length -eq 0) {$draft = "$etype`:$identifier`:$column"}
 else {$draft += "; $etype`:$identifier`:$column"}
 
 # ---------------- UPDATE UI STATE ----------------------------------------------------------------
-$State.EntityDraft = $draft; Render-UI -State $State}
+$state.EntityDraft = $draft; Render-UI -State $state}
 $entityIndex++}
-return $State.Entities}
+return $state.Entities}
 
 $entityMappings = Add-EntitiesLive $state $identifierMap $entityTypes}
 entitymappings
 
 # ---------------- DEFAULT SETTINGS --------------------------------------------------------------
-function defaultsettings {if ($state.Type -eq "NRT") {return}; cls; Render-UI -State $state; Write-Question "`nChange DEFAULT Settings (Y/N)? "; $choice = Read-Host
+function defaultsettings {if ($state.Type -eq "NRT") {return}; cls; Render-UI -State $state; Write-Host -f Yellow "`nChange DEFAULT Settings (Y/N)? " -n; $choice = Read-Host
 if ($choice -ne "y") {return}
 
 # ---------------- QUERY FREQUENCY ----------------------------------------------------------------
@@ -386,8 +389,11 @@ cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT1
 $state.LookbackDuration = switch ($pick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; "9" {"P14D"}; "10" {"P30D"}; default {"PT1H"}}
 
 # ---------------- SUPPRESSION DURATION -------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "PT1H"; Write-OptionLine 2 "PT4H"; Write-OptionLine 3 "PT8H"; Write-OptionLine 4 "PT12H"; Write-OptionLine 5 "P1D"; Write-OptionLine 6 "P3D"; Write-OptionLine 7 "P7D"; Write-Question "Suppression Duration: "; $pick = Read-Host
-$state.SuppressionDuration = switch ($pick) {"1" {"PT1H"}; "2" {"PT4H"}; "3" {"PT8H"}; "4" {"P12H"}; "5" {"P1D"}; "6" {"P3D"}; "7" {"P7D"}; default {"PT1H"}}
+cls; Render-UI -State $state; Write-Question "Enable Suppression (Y/N)? "; $pick = Read-Host
+
+if ($pick -eq "y") {$state.SuppressionEnabled = $true; cls; Render-UI -State $state; Write-OptionLine 1 "PT1H"; Write-OptionLine 2 "PT4H"; Write-OptionLine 3 "PT8H"; Write-OptionLine 4 "PT12H"; Write-OptionLine 5 "P1D"; Write-OptionLine 6 "P3D"; Write-OptionLine 7 "P7D"; Write-Question "Suppression Duration: "; $pick = Read-Host
+$state.SuppressionDuration = switch ($pick) {"1" {"PT1H"}; "2" {"PT4H"}; "3" {"PT8H"}; "4" {"P12H"}; "5" {"P1D"}; "6" {"P3D"}; "7" {"P7D"}; default {"PT1H"}}}
+else {$state.SuppressionDuration = "PT1H"}
 
 # ---------------- ALERT THRESHOLD ----------------------------------------------------------------
 cls; Render-UI -State $state; Write-OptionLine 1 "GreaterThan 0 (Default)"; Write-OptionLine 2 "Custom Threshold"; Write-Question "Alert Threshold: "; $pick = Read-Host
@@ -444,13 +450,26 @@ cls; Render-UI -State $state; Write-OptionLine 1 "SingleAlert"; Write-OptionLine
 function AlertDetailsOverrideHeader {Write-Host -f Yellow "Sample Alert Details Override fields:`n"
 Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertDisplayNameFormat " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Suspicious Login from {{" -n; Write-Host -f Green "IPAddress" -n; Write-Host -f White "}}"
 Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertDescriptionFormat " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "User {{" -n; Write-Host -f Green "Account" -n; Write-Host -f White "}} authenticated from {{" -n; Write-Host -f Green "IPAddress" -n; Write-Host -f White "}}"
-Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertSeverityColumnName " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Severity`n";}
-cls; Render-UI -State $state; AlertDetailsOverrideHeader; Write-Question "How many Alert Details Override fields? "; $count = [int](Read-Host)
-for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; AlertDetailsOverrideHeader
-Write-Question "Field Name: "; $name = Read-Host; Write-Question "Value: "; $value = Read-Host
-if ($name -and $value) {$state.AlertDetailsOverride[$name] = $value}}
+Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertSeverityColumnName " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Severity";
+Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertTacticsColumnName " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Tactics";
+Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertTechniquesColumnName " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Techniques`n";}
+
+$fieldMap = @{1 = "alertDisplayNameFormat"; 2 = "alertDescriptionFormat"; 3 = "alertSeverityColumnName"; 4 = "alertTacticsColumnName"; 5 = "alertTechniquesColumnName"}; cls; Render-UI -State $state; AlertDetailsOverrideHeader
+do {Write-Question "How many Alert Details Override fields are required (0-5)? "; $count = [int](Read-Host)} until ($count -ge 0 -and $count -le 5)
+$usedFields = @()
+for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; AlertDetailsOverrideHeader; Write-Host -f Yellow "Available Fields:"
+foreach ($key in $fieldMap.Keys | Sort-Object) {if ($fieldMap[$key] -notin $usedFields) {Write-OptionLine $key $fieldMap[$key]}}
+do {Write-Question "Pick one of the available fields: "; $pick = [int](Read-Host); $name = $fieldMap[$pick]} until ($name -and $name -notin $usedFields)
+$usedFields += $name; Write-Question "Value: "; $value = Read-Host
+if ($value) {$state.AlertDetailsOverride[$name] = $value}}
+
 cls; Render-UI -State $state}
 defaultsettings
+
+function Build-AlertDetailsOverride {$items = @()
+foreach ($item in $state.AlertDetailsOverride.GetEnumerator()) {$value = $item.Value.Replace('"','\"'); $items += "`"$($item.Key)`": `"$value`""}
+$items += '"alertDynamicProperties": []'
+return "{$(($items -join ','))}"}
 
 # ---------------- TEMPLATE -----------------------------------------------------------------------
 function template {@"
@@ -474,28 +493,31 @@ function template {@"
 
 "queryFrequency": "$($state.QueryFrequency)",
 "queryPeriod": "$($state.QueryPeriod)",
-"triggerOperator": "GreaterThan",
-"triggerThreshold": 0,
+"triggerOperator": "$($state.triggerOperator)",
+"triggerThreshold": $($state.triggerThreshold),
+"suppressionEnabled": $($state.suppressionEnabled.ToString().ToLower()),
 "suppressionDuration": "$($state.SuppressionDuration)",
-"suppressionEnabled": false,
+"startTimeUtc": "$($state.StartTimeUtc)",
 
 "tactics": $(($state.Tactics | ConvertTo-Json -Compress)),
 "techniques": $(($state.Techniques | ConvertTo-Json -Compress)),
 "subTechniques": $(($state.SubTechniques | ConvertTo-Json -Compress)),
 
-"incidentConfiguration": {"createIncident": true,
-"groupingConfiguration": {"enabled": false,
-"reopenClosedIncident": false,
+"incidentConfiguration": {"createIncident": $($state.CreateIncident.ToString().ToLower()),
+"groupingConfiguration": {"enabled": $($state.GroupingEnabled.ToString().ToLower()),
+"reopenClosedIncident": $($state.ReopenClosedIncident.ToString().ToLower()),
 "lookbackDuration": "$($state.LookbackDuration)",
-"matchingMethod": "AllEntities",
-"groupByEntities": [],
-"groupByAlertDetails": [],
-"groupByCustomDetails": []}},
+"matchingMethod": "$($state.MatchingMethod)",
 
-"eventGroupingSettings": {"aggregationKind": "SingleAlert"},
-"alertDetailsOverride": {"alertDynamicProperties": []},
 
-"customDetails": $(if ($State.CustomDetails.Count -gt 0) {$State.CustomDetails | ConvertTo-Json -Compress}
+"groupByEntities": $(if ($state.GroupByEntities.Count -gt 0) {$state.GroupByEntities | ConvertTo-Json -Compress} else {"[]"}),
+"groupByAlertDetails": $(if ($state.GroupByAlertDetails.Count -gt 0) {$state.GroupByAlertDetails | ConvertTo-Json -Compress} else {"[]"}),
+"groupByCustomDetails": $(if ($state.GroupByCustomDetails.Count -gt 0) {$state.GroupByCustomDetails | ConvertTo-Json -Compress} else {"[]"})}},
+
+"eventGroupingSettings": {"aggregationKind": "$($state.AggregationKind)"},
+"alertDetailsOverride": $(Build-AlertDetailsOverride),
+
+"customDetails": $(if ($state.CustomDetails.Count -gt 0) {$state.CustomDetails | ConvertTo-Json -Compress}
 else {"{}"}),
 "entityMappings": $(if ($state.Entities.Count -gt 0) {Convert-ToEntityMappings $state.Entities | ConvertTo-Json -Depth 10 -Compress}
 else {"[]"}),
@@ -540,6 +562,9 @@ MITRE ATT&CK:
 Field Mappings:
 • Custom Details: Allows users to define the number and values of these fields.
 • Entities:	  Accepts mapping fields to the 6 standard entities and all of their child identifiers.
+
+Those are the minimum settings required for any rule, but the user is also given the opportunity to adapt several other default settings, at which point several new prompts will be presented.
+The only significant setting that is not allowed to be configured with this script is: alertDynamicProperties within Alert Details Override. 
 
 This tool isn't designed to be a replacement for Sentinel, but rather a fast way of creating offline rules for easy import or transfer of content between environments.
 
