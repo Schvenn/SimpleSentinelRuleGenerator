@@ -470,7 +470,7 @@ Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertTacticsColumnNam
 Write-Host -f Cyan "Field Name: " -n; Write-Host -f White "alertTechniquesColumnName " -n; Write-Host -f Cyan "Value: " -n; Write-Host -f White "Techniques`n";}
 
 $fieldMap = @{1 = "alertDisplayNameFormat"; 2 = "alertDescriptionFormat"; 3 = "alertSeverityColumnName"; 4 = "alertTacticsColumnName"; 5 = "alertTechniquesColumnName"}; cls; Render-UI -State $state; AlertDetailsOverrideHeader
-do {Write-Question "How many Alert Details Override fields are required (0-5)? "; $count = [int](Read-Host)} until ($count -ge 0 -and $count -le 5)
+do {cls; Render-UI -State $state; Write-Question "How many Alert Details Override fields are required (0-5)? "; $count = [int](Read-Host)} until ($count -ge 0 -and $count -le 5)
 $usedFields = @()
 for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; AlertDetailsOverrideHeader; Write-Host -f Yellow "Available Fields:"
 foreach ($key in $fieldMap.Keys | Sort-Object) {if ($fieldMap[$key] -notin $usedFields) {Write-OptionLine $key $fieldMap[$key]}}
@@ -523,7 +523,6 @@ function template {@"
 "reopenClosedIncident": $($state.ReopenClosedIncident.ToString().ToLower()),
 "lookbackDuration": "$($state.LookbackDuration)",
 "matchingMethod": "$($state.MatchingMethod)",
-
 
 "groupByEntities": $(if ($state.GroupByEntities.Count -gt 0) {$state.GroupByEntities | ConvertTo-Json -Compress} else {"[]"}),
 "groupByAlertDetails": $(if ($state.GroupByAlertDetails.Count -gt 0) {$state.GroupByAlertDetails | ConvertTo-Json -Compress} else {"[]"}),
