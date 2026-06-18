@@ -36,16 +36,40 @@ It is designed for rapid rule prototyping without needing to work directly insid
     - alertDynamicProperties (Placeholder only)
 - Custom field mapping support (`customDetails`)
 - Entity mapping builder for default Sentinel entities and all associated child `Identifiers`:
-    - Account
-      - Name, UPNSuffix, NTDomain, AadUserId, Sid
-    - Host
-      - HostName, DnsDomain, NTDomain, AzureID
-    - IP (Address)
-    - URL (Url)
-    - File
-      - Name, Directory, MD5, SHA1, SHA256
-    - Process
-      - ProcessId, CommandLine, ImageFile
+    - **Account**:
+        - AadUserId, DisplayName, Mail, Name, NTDomain, ObjectId, Sid, UPNSuffix, UserPrincipalName  
+    - **AzureResource**:
+        - AppName, AppId, Publisher  
+    - **CloudApplication**:
+        - AppId, AppName, Publisher  
+    - **DNS**:
+        - DomainName  
+    - **File**:
+        - Directory, FileHash, MD5, Name, SHA1, SHA256  
+    - **FileHash**:
+        - MD5, SHA1, SHA256  
+    - **Host**:
+        - AzureID, DnsDomain, FQDN, HostName, NetBiosName, NTDomain, OSFamily, OSVersion  
+    - **IP**:
+        - Address  
+    - **MailMessage**:
+        - DeliveryAction, MessageId, Recipient, Sender, Subject  
+    - **Mailbox**:
+        - DisplayName, MailboxPrimaryAddress, UPN  
+    - **Malware**:
+        - Category, Name  
+    - **Process**:
+        - AccountName, CommandLine, ImageFile, ImageFileHash, ParentProcessId, ProcessId, ProcessName  
+    - **RegistryKey**:
+        - Key  
+    - **RegistryValue**:
+        - Name, Value  
+    - **SecurityGroup**:
+        - GroupId, GroupName, Member, TenantId  
+    - **SubmissionMail**:
+        - Recipient, Sender, Status, SubmissionId  
+    - **URL**:
+        - Url  
 
 - Exports valid Sentinel ARM template JSON
 ---
