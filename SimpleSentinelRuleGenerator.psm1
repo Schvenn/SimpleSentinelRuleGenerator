@@ -243,27 +243,27 @@ function decriptionandquery {cls; Render-UI -State $state; $description = Read-M
 decriptionandquery
 
 # ---------------- RULE TYPE ----------------------------------------------------------------------
-function ruletype {cls; Render-UI -State $state; Write-OptionLine 1 "Scheduled"
+function ruletype {do{cls; Render-UI -State $state; Write-OptionLine 1 "Scheduled"
 Write-OptionLine 2 "NRT"
 Write-Question "Select rule Schedule type: "; $ruleType = Read-Host
 $state.Type = if ($ruleType -eq "2") {"NRT"}
-else {"Scheduled"}}
+else {"Scheduled"}} until ($ruleType -match '^[1-2]$')}
 ruletype
 
 # ---------------- ENABLED STATUS------------------------------------------------------------------
-function enabledstatus {cls; Render-UI -State $state; Write-Question "Enabled (Y/N)? "
-$enabledPick = Read-Host
+function enabledstatus {do{cls; Render-UI -State $state; Write-Question "Enabled (Y/N)? "
+$enabledPick = Read-Host} until ($enabledPick -match '^[yn]$')
 $state.Enabled = if ($enabledPick -eq "y") {"true"}
 else {"false"}}
 enabledstatus
 
 # ---------------- SEVERITY -----------------------------------------------------------------------
-function severity {cls; Render-UI -State $state; Write-OptionLine 1 "Informational"
+function severity {do{cls; Render-UI -State $state; Write-OptionLine 1 "Informational"
 Write-OptionLine 2 "Low"
 Write-OptionLine 3 "Medium"
 Write-OptionLine 4 "High"
 Write-Question "Select Severity: "
-$sevPick = Read-Host
+$sevPick = Read-Host} until ($sevPick -match '^[1-4]$')
 $state.Severity = if ($sevPick -eq 1) {"Informational"}
 elseif ($sevPick -eq 2) {"Low"}
 elseif ($sevPick -eq 3) {"Medium"}
@@ -371,60 +371,60 @@ $entityMappings = Add-EntitiesLive $state $identifierMap $entityTypes}
 entitymappings
 
 # ---------------- DEFAULT SETTINGS --------------------------------------------------------------
-function defaultsettings {if ($state.Type -eq "NRT") {return}; cls; Render-UI -State $state; Write-Host -f Yellow "`nChange DEFAULT Settings (Y/N)? " -n; $choice = Read-Host
-if ($choice -ne "y") {return}
+function defaultsettings {if ($state.Type -eq "NRT") {return}; do{cls; Render-UI -State $state; Write-Host -f Yellow "`nChange DEFAULT Settings (Y/N)? " -n; $defaultspick = Read-Host
+if ($defaultspick -eq "n") {return}} until ($defaultspick -match '^[yn]$')
 
 # ---------------- QUERY FREQUENCY ----------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-Question "Query Frequency: "; $queryFrequencyPick = Read-Host
-$state.QueryFrequency = switch ($queryFrequencyPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; default {"PT1H"}}
+do{cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-Question "Query Frequency: "; $queryFrequencyPick = Read-Host
+$state.QueryFrequency = switch ($queryFrequencyPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; default {"PT1H"}}} until ($queryFrequencyPick -match '^[1-8]$')
 
 # ---------------- QUERY PERIOD -------------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-Question "Query Period: "; $queryPeriodPick = Read-Host
-$state.QueryPeriod = switch ($queryPeriodPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; default {"PT1H"}}
+do{cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-Question "Query Period: "; $queryPeriodPick = Read-Host
+$state.QueryPeriod = switch ($queryPeriodPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; default {"PT1H"}}} until ($queryPeriodPick -match '^[1-8]$')
 
 if ([int]$queryFrequencyPick -gt [int]$queryPeriodPick) {Write-Host -f Red "`nInvalid configuration: Query Period cannot be shorter than Query Frequency.`nQuery Period has therefore been changed to $($state.QueryFrequency) in order to match Query Frequency."; $state.QueryPeriod = $state.QueryFrequency; Read-Host}
 
 # ---------------- LOOKBACK DURATION --------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-OptionLine 9 "P14D"; Write-OptionLine 10 "P30D"; Write-Question "Lookback Duration: "; $pick = Read-Host
-$state.LookbackDuration = switch ($pick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; "9" {"P14D"}; "10" {"P30D"}; default {"PT1H"}}
+cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-OptionLine 9 "P14D"; Write-OptionLine 10 "P30D"; Write-Question "Lookback Duration: "; $lookbackPick = Read-Host
+$state.LookbackDuration = switch ($lookbackPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; "9" {"P14D"}; "10" {"P30D"}; default {"PT1H"}}
 
 # ---------------- SUPPRESSION DURATION -------------------------------------------------------
-cls; Render-UI -State $state; Write-Question "Enable Suppression (Y/N)? "; $pick = Read-Host
+do{cls; Render-UI -State $state; Write-Question "Enable Suppression (Y/N)? "; $enableSuppressionPick = Read-Host} until ($enableSuppressionPick -match '^[yn]$')
 
-if ($pick -eq "y") {$state.SuppressionEnabled = $true; cls; Render-UI -State $state; Write-OptionLine 1 "PT1H"; Write-OptionLine 2 "PT4H"; Write-OptionLine 3 "PT8H"; Write-OptionLine 4 "PT12H"; Write-OptionLine 5 "P1D"; Write-OptionLine 6 "P3D"; Write-OptionLine 7 "P7D"; Write-Question "Suppression Duration: "; $pick = Read-Host
-$state.SuppressionDuration = switch ($pick) {"1" {"PT1H"}; "2" {"PT4H"}; "3" {"PT8H"}; "4" {"P12H"}; "5" {"P1D"}; "6" {"P3D"}; "7" {"P7D"}; default {"PT1H"}}}
+if ($enableSuppressionPick -eq "y") {$state.SuppressionEnabled = $true; do{cls; Render-UI -State $state; Write-OptionLine 1 "PT1H"; Write-OptionLine 2 "PT4H"; Write-OptionLine 3 "PT8H"; Write-OptionLine 4 "PT12H"; Write-OptionLine 5 "P1D"; Write-OptionLine 6 "P3D"; Write-OptionLine 7 "P7D"; Write-Question "Suppression Duration: "; $suppressionPick = Read-Host} until ($suppressionPick -match '^[1-7]$')
+$state.SuppressionDuration = switch ($suppressionPick) {"1" {"PT1H"}; "2" {"PT4H"}; "3" {"PT8H"}; "4" {"P12H"}; "5" {"P1D"}; "6" {"P3D"}; "7" {"P7D"}; default {"PT1H"}}}
 else {$state.SuppressionDuration = "PT1H"}
 
 # ---------------- ALERT THRESHOLD ----------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "GreaterThan 0 (Default)"; Write-OptionLine 2 "Custom Threshold"; Write-Question "Alert Threshold: "; $pick = Read-Host
+do{cls; Render-UI -State $state; Write-OptionLine 1 "GreaterThan 0 (Default)"; Write-OptionLine 2 "Custom Threshold"; Write-Question "Alert Threshold: "; $alertThreshold = Read-Host} until ($alertThreshold -match '^[1-2]$')
 
-if ($pick -eq "2") {cls; Render-UI -State $state; Write-Host -f White "Trigger Operator:"; Write-OptionLine 1 "GreaterThan"; Write-OptionLine 2 "LessThan"; Write-OptionLine 3 "Equal"; Write-OptionLine 4 "NotEqual"; Write-Question "Choice: "; $operator = Read-Host
-$state.TriggerOperator = switch ($operator) {"1" {"GreaterThan"}; "2" {"LessThan"}; "3" {"Equal"}; "4" {"NotEqual"}; default {"GreaterThan"}}
+if ($alertThreshold -eq "2") {do{cls; Render-UI -State $state; Write-Host -f White "Trigger Operator:"; Write-OptionLine 1 "GreaterThan"; Write-OptionLine 2 "LessThan"; Write-OptionLine 3 "Equal"; Write-OptionLine 4 "NotEqual"; Write-Question "Choice: "; $operatorPick = Read-Host} until ($operatorPick -match '^[1-4]$')
+$state.TriggerOperator = switch ($operatorPick) {"1" {"GreaterThan"}; "2" {"LessThan"}; "3" {"Equal"}; "4" {"NotEqual"}; default {"GreaterThan"}}
 Write-Question "Trigger Threshold: "; $state.TriggerThreshold = [int](Read-Host)}
 
 # ---------------- FIRST RUN TIME -----------------------------------------------------------------
-cls; Render-UI -State $state; Write-Question "Configure first run time (Y/N)? "; $pick = Read-Host
+do{cls; Render-UI -State $state; Write-Question "Configure first run time (Y/N)? "; $firstRunPick = Read-Host} until ($firstRunPick -match '^[yn]$')
 
-if ($pick -eq "y") {cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)
-cls; Render-UI -State $state; Write-Host -f White "Minute:"; Write-OptionLine 1 "00"; Write-OptionLine 2 "15"; Write-OptionLine 3 "30"; Write-OptionLine 4 "45"; Write-Question "Choice: "; $minutePick = Read-Host
+if ($firstRunPick -eq "y") {cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)
+do{cls; Render-UI -State $state; Write-Host -f White "Minute:"; Write-OptionLine 1 "00"; Write-OptionLine 2 "15"; Write-OptionLine 3 "30"; Write-OptionLine 4 "45"; Write-Question "Choice: "; $minutePick = Read-Host} until ($minutePick -match '^[1-4]$') 
 $minute = switch ($minutePick) {"1" {0}; "2" {15}; "3" {30}; "4" {45}; default {0}}
 $state.StartTimeUtc = "{0:00}:{1:00}:00Z" -f $hour,$minute}
 
 # ---------------- INCIDENT CREATION --------------------------------------------------------------
-cls; Render-UI -State $state; Write-Question "Create Incident (Y/N)? "; $pick = Read-Host
-$state.CreateIncident = ($pick -eq "y")
+do{cls; Render-UI -State $state; Write-Question "Create Incident (Y/N)? "; $incidentPick = Read-Host} until ($incidentPick -match '^[yn]$')
+$state.CreateIncident = ($incidentPick -eq "y")
 
 # ---------------- INCIDENT GROUPING --------------------------------------------------------------
-cls; Render-UI -State $state; Write-Question "Enable Incident Grouping (Y/N)? "; $pick = Read-Host
-$state.GroupingEnabled = ($pick -eq "y")
+do{cls; Render-UI -State $state; Write-Question "Enable Incident Grouping (Y/N)? "; $incidentGroupingPick = Read-Host} until ($incidentGroupingPick -match '^[yn]$')
+$state.GroupingEnabled = ($incidentGroupingPick -eq "y")
 
 # ---------------- REOPEN CLOSED INCIDENT ---------------------------------------------------------
-if ($state.GroupingEnabled) {cls; Render-UI -State $state; Write-Question "Reopen closed incident (Y/N)? "; $pick = Read-Host
-$state.ReopenClosedIncident = ($pick -eq "y")}
+if ($state.GroupingEnabled) {do{cls; Render-UI -State $state; Write-Question "Reopen closed incident (Y/N)? "; $reopenPick = Read-Host} until ($reopenPick -match '^[yn]$')
+$state.ReopenClosedIncident = ($reopenPick -eq "y")}
 
 # ---------------- MATCHING METHOD ----------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "AllEntities"; Write-OptionLine 2 "Selected"; Write-Question "Matching Method: "; $pick = Read-Host
-$state.MatchingMethod = switch ($pick) {"2" {"Selected"} default {"AllEntities"}}
+do{cls; Render-UI -State $state; Write-OptionLine 1 "AllEntities"; Write-OptionLine 2 "Selected"; Write-Question "Matching Method: "; $matchingPick = Read-Host} until ($matchingPick -match '^[1-2]$')
+$state.MatchingMethod = switch ($matchingPick) {"2" {"Selected"} default {"AllEntities"}}
 
 # ---------------- GROUP BY ENTITIES --------------------------------------------------------------
 $state.GroupByEntities = @()
@@ -444,7 +444,8 @@ for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question 
 if ($state.MatchingMethod -eq "Selected" -and $state.GroupByEntities.Count -eq 0 -and $state.GroupByAlertDetails.Count -eq 0 -and $state.GroupByCustomDetails.Count -eq 0) {Write-Host -f Red "`n'Matching Method: Selected' requires at least one grouping field, but none have been assigned.`nResetting to 'AllEntities'."; Read-Host; $state.MatchingMethod = "AllEntities";}
 
 # ---------------- EVENT GROUPING SETTINGS --------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "SingleAlert"; Write-OptionLine 2 "AlertPerResult"; Write-Question "Event Grouping method: "; $pick = Read-Host; $state.AggregationKind = switch ($pick) {"2" {"AlertPerResult"} default {"SingleAlert"}}
+do{cls; Render-UI -State $state; Write-OptionLine 1 "SingleAlert"; Write-OptionLine 2 "AlertPerResult"; Write-Question "Event Grouping method: "; $eventGroupingPick = Read-Host} until ($eventGroupingPick -match '^[1-2]$')
+$state.AggregationKind = switch ($eventGroupingPick) {"2" {"AlertPerResult"} default {"SingleAlert"}}
 
 # ---------------- ALERT DETAILS OVERRIDE ---------------------------------------------------------
 function AlertDetailsOverrideHeader {Write-Host -f Yellow "Sample Alert Details Override fields:`n"
