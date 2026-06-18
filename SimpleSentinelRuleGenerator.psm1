@@ -216,11 +216,10 @@ $i++}
 Write-Host ""; Write-Host $Prompt -f Yellow -n}}
 
 # ---------------- CONVERT ENTITY MAPPING FOR FILE OUTPUT -----------------------------------------
-function Convert-ToEntityMappings($entities) {$result = @()
-foreach ($group in ($entities | Group-Object Type)) {$mappings = @()
-foreach ($e in $group.Group) {$mappings += @{identifier = $e.Identifier; columnName = $e.Name}}
-$result += @{entityType = $group.Name; fieldMappings = $mappings}}
-return $result}
+function Convert-ToEntityMappings ($entities) {$entities | Group-Object Type | ForEach-Object {$type = $_.Name
+[ordered]@{entityType = $script:EntityCatalog[$type].SentinelName
+fieldMappings = @($_.Group | ForEach-Object {[ordered]@{identifier = $_.Identifier
+columnName  = $_.Name}})}}}
 
 # ---------------- READ VARIABLES -----------------------------------------------------------------
 function Write-OptionLine ([int]$Index, [string]$Text) {Write-Host $Index -f Green -n; Write-Host " $Text" -f White}
@@ -304,16 +303,35 @@ if ($name -and $column) {$state.CustomDetails[$name] = $column; cls; Render-UI -
 customdetails
 
 # ---------------- ENTITY MAPPINGS ----------------------------------------------------------------
-function entitymappings {$state.Entities = @(); $state.EntityDraft = "";
-$entityTypes = @("Account","Host","IP","URL","File","Process")
-$identifierMap = @{Account = @("Name","UPNSuffix","NTDomain","AadUserId","Sid")
-Host = @("HostName","DnsDomain","NTDomain","AzureID")
-IP = @("Address")
-URL = @("Url")
-File = @("Name","Directory","MD5","SHA1","SHA256")
-Process = @("ProcessId","CommandLine","ImageFile")}
+function entitymappings {$script:EntityCatalog = @{Account = @{SentinelName = "Account"; MaxEntities = 8; Identifiers = @("Name","UPNSuffix","NTDomain","AadUserId","Sid","UserPrincipalName","DisplayName","Mail","ObjectId")}
+Host = @{SentinelName = "Host"; MaxEntities = 8; Identifiers = @("HostName","DnsDomain","NTDomain","AzureID","OSFamily","OSVersion","NetBiosName","FQDN")}
+IP = @{SentinelName = "IP"; MaxEntities = 1; Identifiers = @("Address")}
+URL = @{SentinelName = "URL"; MaxEntities = 1; Identifiers = @("Url")}
+File = @{SentinelName = "File"; MaxEntities = 3; Identifiers = @("Name","Directory","MD5","SHA1","SHA256")}
+ProcessEntity = @{SentinelName = "Process"; MaxEntities = 6; Identifiers = @("ProcessId","CommandLine","ImageFile","AccountName","ParentProcessId","ProcessName","ImageFileHash")}
+DNS = @{SentinelName = "DNS"; MaxEntities = 1; Identifiers = @("DomainName")}
+Malware = @{SentinelName = "Malware"; MaxEntities = 2; Identifiers = @("Name","Category")}
+RegistryKey = @{SentinelName = "RegistryKey"; MaxEntities = 1; Identifiers = @("Key")}
+RegistryValue = @{SentinelName = "RegistryValue"; MaxEntities = 2; Identifiers = @("Name","Value")}
+Mailbox = @{SentinelName = "Mailbox"; MaxEntities = 3; Identifiers = @("MailboxPrimaryAddress","DisplayName","UPN")}
+MailMessage = @{SentinelName = "MailMessage"; MaxEntities = 5; Identifiers = @("MessageId","Subject","Sender","Recipient","DeliveryAction")}
+SubmissionMail = @{SentinelName = "SubmissionMail"; MaxEntities = 4; Identifiers = @("SubmissionId","Sender","Recipient","Status")}
+AzureResource = @{SentinelName = "AzureResource"; MaxEntities = 4; Identifiers = @("ResourceId","ResourceName","SubscriptionId","ResourceGroup")}
+CloudApplication = @{SentinelName = "CloudApplication"; MaxEntities = 3; Identifiers = @("AppId","AppName","Publisher")}
+FileHash = @{SentinelName = "FileHash"; MaxEntities = 3; Identifiers = @("MD5","SHA1","SHA256")}
+SecurityGroup = @{SentinelName = "SecurityGroup"; MaxEntities = 4; Identifiers = @("GroupId","GroupName","Member","TenantId")}}
 
-function Get-AvailableIdentifiers($state, $etype, $idList) {$used = $state.UsedEntityPairs; return $idList | Where-Object {"$etype|$_" -notin $used}}
+$state.EntityUsage = @{UsedPairs = @(); UsedPerType = @{}; Entities = @()}
+
+function Get-EntityTypeRemaining ($type) {$max = $script:EntityCatalog[$type].MaxEntities; $used = if ($state.EntityUsage.UsedPerType[$type]) {$state.EntityUsage.UsedPerType[$type]} else {0}; return ($max - $used)}
+
+function Get-AvailableIdentifiers ($type) {$ids = $script:EntityCatalog[$type].Identifiers; return $ids | Where-Object {"$type|$_" -notin $state.EntityUsage.UsedPairs}}
+
+function Mark-IdentifierUsed ($type, $id) {$state.EntityUsage.UsedPairs += "$type|$id"
+if (-not $state.EntityUsage.UsedPerType.ContainsKey($type)) {$state.EntityUsage.UsedPerType[$type] = 0}
+$state.EntityUsage.UsedPerType[$type]++}
+
+$entityTypes = @($script:EntityCatalog.Keys | Sort-Object)
 
 cls; Render-UI -State $state
 function Add-EntitiesLive ([hashtable]$state, [hashtable]$IdentifierMap, [string[]]$EntityTypes) {$state.Entities = @(); $draft = ""; Write-Question "How many Sentinel Entity mappings? "; $entityCount = Read-Host
@@ -323,18 +341,14 @@ $entityIndex = 1
 while ($entityIndex -le [int]$entityCount) {Write-Host -f white "Select Entity Type:"
 for ($e = 0; $e -lt $EntityTypes.Count; $e++) {Write-Host "$($e+1) $($EntityTypes[$e])"}
 Write-Question "Entity Type: "; $etypeIndex = [int](Read-Host)
-$etype = $EntityTypes[$etypeIndex - 1]; $idList = @(Get-AvailableIdentifiers $state $etype $IdentifierMap[$etype])
-
-if ($idList.Count -eq 0) {Write-Host -f Yellow "No more identifiers available for $etype"; continue}
+$etype = $EntityTypes[$etypeIndex - 1]; $idList = @(Get-AvailableIdentifiers $etype); $remaining = Get-EntityTypeRemaining $etype
+if ($remaining -le 0) {Write-Host -f Yellow "Maximum mappings reached for $etype"; Read-Host; continue}
 
 # Auto-handle single-identifier entities
-if ($etype -in @("IP","URL")) {$identifier = $idList[0]; $pair = "$etype|$identifier";  $state.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
-$entity = @{Type = $etype
-Identifier = $identifier
-Name = $column}
-
+if ($idList.Count -eq 1) {$identifier = $idList[0]; $pair = "$etype|$identifier";  $state.EntityUsage.UsedPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
+$entity = @{Type = $etype; SentinelType = $script:EntityCatalog[$etype].SentinelName; Identifier = $identifier; Name = $column}
 $state.Entities += $entity
-if ($draft.Length -eq 0) {$draft = "$etype`:$identifier`:$column"}
+if ($draft.Length -eq 0) {$sentinelType = $script:EntityCatalog[$etype].SentinelName; $draft += "$sentinelType`:$identifier`:$column"}
 else {$draft += "; $etype`:$identifier`:$column"}
 
 $state.EntityDraft = $draft; Render-UI -State $state; $entityIndex++; continue}
@@ -350,9 +364,9 @@ Write-Question "Identifier: "; $idChoice = [int](Read-Host)
 $identifier = $selectionMap[$idChoice]
 if (-not $identifier) {$j--; continue}
 $pair = "$etype|$identifier"
-if ($state.UsedEntityPairs -contains $pair) {if ($state.UsedEntityPairs -contains $pair) {Write-Host -f red "That was already used."}; Read-Host; $j--; continue}
+if ($state.EntityUsage.UsedPairs -contains $pair) {if ($state.EntityUsage.UsedPairs -contains $pair) {Write-Host -f red "That was already used."}; Read-Host; $j--; continue}
 
-$state.UsedEntityPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
+$state.EntityUsage.UsedPairs += $pair; Write-Question "Field Name: "; $column = Read-Host
 
 # ---------------- BUILD ENTITY OBJECT ------------------------------------------------------------
 $entity = @{Type = $etype; Identifier = $identifier; Name = $column}
