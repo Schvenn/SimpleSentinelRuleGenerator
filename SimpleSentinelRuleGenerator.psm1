@@ -296,9 +296,9 @@ $state.Tactics    = @($state.Tactics + $derivedTac) | Select-Object -Unique
 cls; Render-UI -State $state
 
 # ---------------- CUSTOM DETAILS -----------------------------------------------------------------
-function customdetails {$state.CustomDetails = @{}; cls; Render-UI -State $state
-Write-Question "How many Custom Detail fields are required? "; $count = [int](Read-Host)
-for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail title: "; $name = Read-Host
+function customdetails {$state.CustomDetails = @{}; do{cls; Render-UI -State $state
+Write-Question "How many Custom Detail fields are required? "; $customDetailsCount = [int](Read-Host)} until ($customDetailsCount -match '^([1-9]|1\d|20)$')
+for ($i = 1; $i -le $customDetailsCount; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail title: "; $name = Read-Host
 Write-Question "Field Name: "; $column = Read-Host
 if ($name -and $column) {$state.CustomDetails[$name] = $column; cls; Render-UI -State $state;}}}
 customdetails
@@ -385,7 +385,7 @@ $state.QueryPeriod = switch ($queryPeriodPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3"
 if ([int]$queryFrequencyPick -gt [int]$queryPeriodPick) {Write-Host -f Red "`nInvalid configuration: Query Period cannot be shorter than Query Frequency.`nQuery Period has therefore been changed to $($state.QueryFrequency) in order to match Query Frequency."; $state.QueryPeriod = $state.QueryFrequency; Read-Host}
 
 # ---------------- LOOKBACK DURATION --------------------------------------------------------------
-cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-OptionLine 9 "P14D"; Write-OptionLine 10 "P30D"; Write-Question "Lookback Duration: "; $lookbackPick = Read-Host
+do{cls; Render-UI -State $state; Write-OptionLine 1 "PT5M"; Write-OptionLine 2 "PT15M"; Write-OptionLine 3 "PT30M"; Write-OptionLine 4 "PT1H"; Write-OptionLine 5 "PT4H"; Write-OptionLine 6 "P1D"; Write-OptionLine 7 "P3D"; Write-OptionLine 8 "P7D"; Write-OptionLine 9 "P14D"; Write-OptionLine 10 "P30D"; Write-Question "Lookback Duration: "; $lookbackPick = Read-Host} until ($lookbackPick -match '^([1-9]|10)$')
 $state.LookbackDuration = switch ($lookbackPick) {"1" {"PT5M"}; "2" {"PT15M"}; "3" {"PT30M"}; "4" {"PT1H"}; "5" {"PT4H"}; "6" {"P1D"}; "7" {"P3D"}; "8" {"P7D"}; "9" {"P14D"}; "10" {"P30D"}; default {"PT1H"}}
 
 # ---------------- SUPPRESSION DURATION -------------------------------------------------------
@@ -405,7 +405,7 @@ Write-Question "Trigger Threshold: "; $state.TriggerThreshold = [int](Read-Host)
 # ---------------- FIRST RUN TIME -----------------------------------------------------------------
 do{cls; Render-UI -State $state; Write-Question "Configure first run time (Y/N)? "; $firstRunPick = Read-Host} until ($firstRunPick -match '^[yn]$')
 
-if ($firstRunPick -eq "y") {cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)
+if ($firstRunPick -eq "y") {do{cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)} until ($hour -match '^([1-9]|1\d|2[0-3])$')
 do{cls; Render-UI -State $state; Write-Host -f White "Minute:"; Write-OptionLine 1 "00"; Write-OptionLine 2 "15"; Write-OptionLine 3 "30"; Write-OptionLine 4 "45"; Write-Question "Choice: "; $minutePick = Read-Host} until ($minutePick -match '^[1-4]$') 
 $minute = switch ($minutePick) {"1" {0}; "2" {15}; "3" {30}; "4" {45}; default {0}}
 $state.StartTimeUtc = "{0:00}:{1:00}:00Z" -f $hour,$minute}
@@ -428,18 +428,18 @@ $state.MatchingMethod = switch ($matchingPick) {"2" {"Selected"} default {"AllEn
 
 # ---------------- GROUP BY ENTITIES --------------------------------------------------------------
 $state.GroupByEntities = @()
-if ($state.MatchingMethod -eq "Selected") {cls; Render-UI -State $state; Write-Question "How many Group By Entities fields? "; $count = [int](Read-Host)
-for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question "Sentinel Entity Field Name: "; $state.GroupByEntities += Read-Host}}
+if ($state.MatchingMethod -eq "Selected") {do{cls; Render-UI -State $state; Write-Question "How many Group By Entities fields (1-10)? "; $groupByEntitiescount = [int](Read-Host)} until ($groupByEntitiescount -match '^([1-9]|10)$')
+for ($i = 1; $i -le $groupByEntitiescount; $i++) {cls; Render-UI -State $state; Write-Question "Sentinel Entity Field Name: "; $state.GroupByEntities += Read-Host}}
 
 # ---------------- GROUP BY ALERT DETAILS ---------------------------------------------------------
 $state.GroupByAlertDetails = @()
-cls; Render-UI -State $state; Write-Question "How many Group By Alert Details fields? "; $count = [int](Read-Host)
-for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question "Alert Detail Field Name: "; $state.GroupByAlertDetails += Read-Host}
+do{cls; Render-UI -State $state; Write-Question "How many Group By Alert Details fields (1-10)? "; $groupByAlertCount = [int](Read-Host)} until ($groupByAlertCount -match '^([1-9]|10)$')
+for ($i = 1; $i -le $groupByAlertCount; $i++) {cls; Render-UI -State $state; Write-Question "Alert Detail Field Name: "; $state.GroupByAlertDetails += Read-Host}
 
 # ---------------- GROUP BY CUSTOM DETAILS --------------------------------------------------------
 $state.GroupByCustomDetails = @()
-cls; Render-UI -State $state; Write-Question "How many Group By Custom Details fields? "; $count = [int](Read-Host)
-for ($i = 1; $i -le $count; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail Field Name: "; $state.GroupByCustomDetails += Read-Host}
+do{cls; Render-UI -State $state; Write-Question "How many Group By Custom Details fields (1-10)? "; $groupByCustomCount = [int](Read-Host)} until ($groupByCustomCount -match '^([1-9]|10)$')
+for ($i = 1; $i -le $groupByCustomCount; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail Field Name: "; $state.GroupByCustomDetails += Read-Host}
 
 if ($state.MatchingMethod -eq "Selected" -and $state.GroupByEntities.Count -eq 0 -and $state.GroupByAlertDetails.Count -eq 0 -and $state.GroupByCustomDetails.Count -eq 0) {Write-Host -f Red "`n'Matching Method: Selected' requires at least one grouping field, but none have been assigned.`nResetting to 'AllEntities'."; Read-Host; $state.MatchingMethod = "AllEntities";}
 
