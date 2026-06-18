@@ -1,5 +1,5 @@
 @{RootModule = 'simplesentinelrulegenerator.psm1'
-ModuleVersion = '2.0'
+ModuleVersion = '2.1'
 GUID = 'ccd81dc6-8e13-4bec-b69c-03866abfa0de'
 Author = 'Craig Plath'
 CompanyName = 'Plath Consulting Incorporated'
