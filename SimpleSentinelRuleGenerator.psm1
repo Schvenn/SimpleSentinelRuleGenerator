@@ -296,7 +296,7 @@ cls; Render-UI -State $state
 
 # ---------------- CUSTOM DETAILS -----------------------------------------------------------------
 function customdetails {$state.CustomDetails = @{}; do{cls; Render-UI -State $state
-Write-Question "How many Custom Detail fields are required? "; $customDetailsCount = [int](Read-Host)} until ($customDetailsCount -match '^([1-9]|1\d|20)$')
+Write-Question "How many Custom Detail fields are required? "; $customDetailsCount = [int](Read-Host)} until ($customDetailsCount -match '^([0-9]|1\d|20)$')
 for ($i = 1; $i -le $customDetailsCount; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail title: "; $name = Read-Host
 Write-Question "Field Name: "; $column = Read-Host
 if ($name -and $column) {$state.CustomDetails[$name] = $column; cls; Render-UI -State $state;}}}
@@ -419,7 +419,7 @@ Write-Question "Trigger Threshold: "; $state.TriggerThreshold = [int](Read-Host)
 # ---------------- FIRST RUN TIME -----------------------------------------------------------------
 do{cls; Render-UI -State $state; Write-Question "Configure first run time (Y/N)? "; $firstRunPick = Read-Host} until ($firstRunPick -match '^[yn]$')
 
-if ($firstRunPick -eq "y") {do{cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)} until ($hour -match '^([1-9]|1\d|2[0-3])$')
+if ($firstRunPick -eq "y") {do{cls; Render-UI -State $state; Write-Question "Hour (0-23): "; $hour = [int](Read-Host)} until ($hour -match '^([0-9]|1\d|2[0-3])$')
 do{cls; Render-UI -State $state; Write-Host -f White "Minute:"; Write-OptionLine 1 "00"; Write-OptionLine 2 "15"; Write-OptionLine 3 "30"; Write-OptionLine 4 "45"; Write-Question "Choice: "; $minutePick = Read-Host} until ($minutePick -match '^[1-4]$') 
 $minute = switch ($minutePick) {"1" {0}; "2" {15}; "3" {30}; "4" {45}; default {0}}
 $state.StartTimeUtc = "{0:00}:{1:00}:00Z" -f $hour,$minute}
@@ -442,17 +442,17 @@ $state.MatchingMethod = switch ($matchingPick) {"2" {"Selected"} default {"AllEn
 
 # ---------------- GROUP BY ENTITIES --------------------------------------------------------------
 $state.GroupByEntities = @()
-if ($state.MatchingMethod -eq "Selected") {do{cls; Render-UI -State $state; Write-Question "How many Group By Entities fields (1-10)? "; $groupByEntitiescount = [int](Read-Host)} until ($groupByEntitiescount -match '^([1-9]|10)$')
+if ($state.MatchingMethod -eq "Selected") {do{cls; Render-UI -State $state; Write-Question "How many Group By Entities fields (1-10)? "; $groupByEntitiescount = [int](Read-Host)} until ($groupByEntitiescount -match '^([0-9]|10)$')
 for ($i = 1; $i -le $groupByEntitiescount; $i++) {cls; Render-UI -State $state; Write-Question "Sentinel Entity Field Name: "; $state.GroupByEntities += Read-Host}}
 
 # ---------------- GROUP BY ALERT DETAILS ---------------------------------------------------------
 $state.GroupByAlertDetails = @()
-do{cls; Render-UI -State $state; Write-Question "How many Group By Alert Details fields (1-10)? "; $groupByAlertCount = [int](Read-Host)} until ($groupByAlertCount -match '^([1-9]|10)$')
+do{cls; Render-UI -State $state; Write-Question "How many Group By Alert Details fields (1-10)? "; $groupByAlertCount = [int](Read-Host)} until ($groupByAlertCount -match '^([0-9]|10)$')
 for ($i = 1; $i -le $groupByAlertCount; $i++) {cls; Render-UI -State $state; Write-Question "Alert Detail Field Name: "; $state.GroupByAlertDetails += Read-Host}
 
 # ---------------- GROUP BY CUSTOM DETAILS --------------------------------------------------------
 $state.GroupByCustomDetails = @()
-do{cls; Render-UI -State $state; Write-Question "How many Group By Custom Details fields (1-10)? "; $groupByCustomCount = [int](Read-Host)} until ($groupByCustomCount -match '^([1-9]|10)$')
+do{cls; Render-UI -State $state; Write-Question "How many Group By Custom Details fields (1-10)? "; $groupByCustomCount = [int](Read-Host)} until ($groupByCustomCount -match '^([0-9]|10)$')
 for ($i = 1; $i -le $groupByCustomCount; $i++) {cls; Render-UI -State $state; Write-Question "Custom Detail Field Name: "; $state.GroupByCustomDetails += Read-Host}
 
 if ($state.MatchingMethod -eq "Selected" -and $state.GroupByEntities.Count -eq 0 -and $state.GroupByAlertDetails.Count -eq 0 -and $state.GroupByCustomDetails.Count -eq 0) {Write-Host -f Red "`n'Matching Method: Selected' requires at least one grouping field, but none have been assigned.`nResetting to 'AllEntities'."; Read-Host; $state.MatchingMethod = "AllEntities";}
@@ -492,7 +492,7 @@ function template {@"
 "contentVersion": "1.0.0.0",
 
 "resources": [{"type": "Microsoft.SecurityInsights/alertRules",
-"apiVersion": "2023-11-01-preview",
+"apiVersion": "2023-10-91-preview",
 
 "name": "$guid",
 "location": "global",
